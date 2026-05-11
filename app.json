@@ -43,6 +43,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "996a9867-7335-4467-8543-fe38516d3bed"
+      }
+    },
+    "owner": "saracodelabs"
   }
 }
