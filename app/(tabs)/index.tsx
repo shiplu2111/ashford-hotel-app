@@ -1,6 +1,7 @@
 import React from "react";
 import { View, ScrollView, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { RevenueCard } from "../../components/dashboard/RevenueCard";
 import { StatsCard } from "../../components/dashboard/StatsCard";
@@ -9,6 +10,7 @@ import { useTheme } from "../../hooks/useTheme";
 
 export default function DashboardScreen() {
   const { isDark } = useTheme();
+  const router = useRouter();
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-background-dark">
@@ -35,7 +37,7 @@ export default function DashboardScreen() {
           <StatsCard label="Ready" value="03" icon="checkmark-circle" color="#10b981" />
         </View>
 
-        <SectionHeader title="Recent Activities" actionLabel="History" />
+        <SectionHeader title="Recent Activities" actionLabel="History" onAction={() => router.push("/activities")} />
         <ActivityCard 
           title="New Booking - Presidential Suite" 
           subtitle="Mr. James Bond • 4 Nights" 

@@ -18,11 +18,11 @@ export default function SplashScreen() {
 
   useEffect(() => {
     logoScale.value = withTiming(1, {
-      duration: 1000,
-      easing: Easing.out(Easing.back(1.5)),
+      duration: 800,
+      easing: Easing.out(Easing.back(1.2)),
     });
     logoOpacity.value = withTiming(1, { 
-      duration: 800 
+      duration: 600 
     }, (finished) => {
       if (finished) {
         runOnJS(navigateToNext)();
@@ -33,7 +33,7 @@ export default function SplashScreen() {
   const navigateToNext = () => {
     setTimeout(() => {
       router.replace("/onboarding");
-    }, 1500);
+    }, 500);
   };
 
   const logoStyle = useAnimatedStyle(() => ({
@@ -42,7 +42,7 @@ export default function SplashScreen() {
   }));
 
   return (
-    <SafeAreaView className="flex-1 bg-primary">
+    <SafeAreaView className="flex-1 bg-black">
       <View className="flex-1 items-center justify-center">
         <Animated.View style={logoStyle} className="items-center">
           <Image
