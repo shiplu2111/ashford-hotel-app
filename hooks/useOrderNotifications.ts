@@ -160,11 +160,11 @@ TaskManager.defineTask(BACKGROUND_ORDER_TASK, async () => {
             },
             trigger: null,
         });
-        return BackgroundTask.BackgroundFetchResult.NewData;
+        return BackgroundTask.BackgroundTaskResult.Success;
     }
-    return BackgroundTask.BackgroundFetchResult.NoData;
+    return BackgroundTask.BackgroundTaskResult.Success; // Even if no data, we succeeded in checking
   } catch (error) {
-    return BackgroundTask.BackgroundFetchResult.Failed;
+    return BackgroundTask.BackgroundTaskResult.Failed;
   }
 });
 

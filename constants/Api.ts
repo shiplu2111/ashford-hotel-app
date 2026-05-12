@@ -8,4 +8,9 @@ export const ENDPOINTS = {
   ADMIN_ORDERS: `${API_BASE}/admin-api/orders`,
   ADMIN_ORDER_DETAILS: (id: string) => `${API_BASE}/admin-api/order-details/${id}`,
   ADMIN_CHECK_NEW_ORDERS: `${API_BASE}/admin-api/check-new-orders`,
+  ADMIN_ACCEPT_ORDER: `${API_BASE}/admin-api/accept-order`,
+  ADMIN_CANCEL_ORDER: `${API_BASE}/admin-api/cancel-order`,
+  ADMIN_COMPLETE_ORDER: `${API_BASE}/admin-api/complete-order`,
+  ADMIN_MAKE_PAYMENT: `${API_BASE}/admin-api/make-payment`,
+  ADMIN_POS_INVOICE: (id: string) => `${API_BASE}/admin-api/pos-invoice/${id}`,
 };
