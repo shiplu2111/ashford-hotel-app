@@ -1,16 +1,19 @@
 import React, { useState, useRef } from "react";
-import { View, Text, TouchableOpacity, TextInput, Image } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../components/ui/Button";
 import { Typography } from "../../constants/Typography";
 import { useTheme } from "../../hooks/useTheme";
+import { ENDPOINTS } from "../../constants/Api";
 
 export default function OTPScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
+  const { email } = useLocalSearchParams<{ email: string }>();
   const [otp, setOtp] = useState(["", "", "", ""]);
+  const [loading, setLoading] = useState(false);
   const inputs = useRef<Array<TextInput | null>>([]);
 
   const handleChange = (text: string, index: number) => {
@@ -26,6 +29,42 @@ export default function OTPScreen() {
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === "Backspace" && otp[index] === "" && index > 0) {
       inputs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length < 4) {
+      Alert.alert("Error", "Please enter the full 4-digit code");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(ENDPOINTS.ADMIN_OTP_LOGIN, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+            email: email,
+            otp: otpCode 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.status === "success" || data.status === "ok") {
+        Alert.alert("Success", "Verification successful! Welcome back.");
+        router.replace("/(tabs)");
+      } else {
+        Alert.alert("Failed", data.message || "Invalid OTP code");
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Server connection failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,7 +86,7 @@ export default function OTPScreen() {
           />
           <Text className={`${Typography.h1} text-primary dark:text-white`}>Verification</Text>
           <Text className="text-gray-500 mt-2">
-            Enter the 4-digit code sent to your email.
+            Enter the 4-digit code sent to {email || "your email"}.
           </Text>
         </View>
 
@@ -68,8 +107,9 @@ export default function OTPScreen() {
         </View>
 
         <Button 
-          title="Verify Code" 
-          onPress={() => router.replace("/(tabs)")} 
+          title={loading ? "Verifying..." : "Verify Code"} 
+          onPress={handleVerifyOTP} 
+          disabled={loading}
         />
 
         <View className="flex-row justify-center mt-8">

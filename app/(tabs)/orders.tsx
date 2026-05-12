@@ -1,10 +1,14 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  DeviceEventEmitter,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,105 +20,142 @@ import {
   SearchInput,
   FilterTabs,
 } from "../../components/restaurant/SharedRestaurant";
-import { OrderCard, Order } from "../../components/restaurant/OrderCard";
+import { OrderCard, Order, TimeAgoText } from "../../components/restaurant/OrderCard";
 import { StatusBadge } from "../../components/restaurant/SharedRestaurant";
 import { Typography } from "../../constants/Typography";
-import { Button } from "../../components/ui/Button";
 import { useTheme } from "../../hooks/useTheme";
-
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "2401",
-    customerName: "James Wilson",
-    tableNumber: "14",
-    items: [
-      { name: "Truffle Pasta", quantity: 2 },
-      { name: "Red Wine", quantity: 1 },
-      { name: "Caesar Salad", quantity: 2 },
-    ],
-    time: "10m ago",
-    total: "$145.00",
-    status: "Preparing",
-  },
-  {
-    id: "2402",
-    customerName: "Sarah Connor",
-    tableNumber: "08",
-    items: [
-      { name: "Grilled Salmon", quantity: 1 },
-      { name: "Greek Salad", quantity: 1 },
-    ],
-    time: "2m ago",
-    total: "$82.00",
-    status: "Pending",
-  },
-  {
-    id: "2405",
-    customerName: "Michael Scott",
-    tableNumber: "03",
-    items: [{ name: "Pepperoni Pizza", quantity: 2 }],
-    time: "Just now",
-    total: "$42.00",
-    status: "Pending",
-  },
-  {
-    id: "2403",
-    customerName: "Robert Fox",
-    tableNumber: "22",
-    items: [{ name: "Margherita Pizza", quantity: 3 }],
-    time: "15m ago",
-    total: "$64.00",
-    status: "Completed",
-  },
-  {
-    id: "2406",
-    customerName: "Emily Chen",
-    tableNumber: "06",
-    items: [
-      { name: "Beef Steak", quantity: 2 },
-      { name: "Mocktail", quantity: 2 },
-      { name: "Cheesecake", quantity: 2 },
-    ],
-    time: "25m ago",
-    total: "$198.00",
-    status: "Preparing",
-  },
-];
-
-const ITEM_PRICES: Record<string, number> = {
-  "Truffle Pasta": 38,
-  "Red Wine": 32,
-  "Caesar Salad": 18,
-  "Grilled Salmon": 45,
-  "Greek Salad": 14,
-  "Pepperoni Pizza": 21,
-  "Margherita Pizza": 21,
-  "Beef Steak": 65,
-  Mocktail: 14,
-  Cheesecake: 14,
-};
+import { ENDPOINTS } from "../../constants/Api";
 
 export default function OrdersTab() {
   const { isDark, colors } = useTheme();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("All");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedOrderItems, setSelectedOrderItems] = useState<any[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
 
   const sheetRef = useRef<BottomSheet>(null);
-  const snapPoints = ["45%", "90%"];
+  const snapPoints = ["45%", "95%"]; 
 
   const tabs = ["All", "Pending", "Preparing", "Completed", "Cancelled"];
 
-  const filteredOrders = MOCK_ORDERS.filter((order) => {
+  const mapStatus = (status: string) => {
+    switch (status) {
+      case "1": return "Pending";
+      case "2": return "Preparing";
+      case "4": return "Completed";
+      case "5": return "Cancelled";
+      default: return "Pending";
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch(ENDPOINTS.ADMIN_ORDERS);
+      const json = await response.json();
+      if (json.status === "success") {
+        const mappedOrders: Order[] = json.data.map((item: any) => {
+            const total = parseFloat(item.bill_amount || item.totalamount || "0");
+            const paid = parseFloat(item.customerpaid || "0");
+            const change = paid > 0 ? paid - total : 0;
+
+            return {
+              id: item.order_id.toString(),
+              customerName: `${item.firstname || "Guest"} ${item.lastname || ""}`.trim(),
+              customerPhone: item.cust_phone,
+              billingAddress: item.address,
+              billingDate: item.order_date,
+              invoiceNumber: item.saleinvoice,
+              tableNumber: item.table_no?.toString() || "0",
+              items: (item.items || []).map((i: any) => ({
+                  name: i.ProductName,
+                  quantity: i.menuqty
+              })), 
+              time: `${item.order_time}`,
+              total: `$${total.toFixed(2)}`,
+              status: mapStatus(item.order_status),
+              subtotal: `$${parseFloat(item.totalamount || "0").toFixed(2)}`,
+              vat: `$${parseFloat(item.VAT || "0").toFixed(2)}`,
+              serviceCharge: `$${parseFloat(item.service_charge || "0").toFixed(2)}`,
+              discount: `$${parseFloat(item.discount || "0").toFixed(2)}`,
+              customerPaid: `$${paid.toFixed(2)}`,
+              changeDue: `$${change.toFixed(2)}`,
+            };
+        });
+        setOrders(mappedOrders);
+      }
+    } catch (error) {
+      console.error(error);
+      // Alert.alert("Error", "Failed to fetch orders");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const fetchOrderDetails = async (orderId: string) => {
+    setItemsLoading(true);
+    setSelectedOrderItems([]);
+    try {
+      const response = await fetch(ENDPOINTS.ADMIN_ORDER_DETAILS(orderId));
+      const json = await response.json();
+      if (json.status === "success") {
+        setSelectedOrderItems(json.data);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setItemsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    
+    // Listen for notification clicks
+    const sub = DeviceEventEmitter.addListener('OPEN_ORDER_DETAILS', (orderId) => {
+        // Find order in list and open
+        const order = orders.find(o => o.id === orderId.toString());
+        if (order) {
+            handleOpenSheet(order);
+        } else {
+            // If not in list, fetch list then open
+            fetchOrders().then(() => {
+                DeviceEventEmitter.emit('OPEN_ORDER_DETAILS', orderId);
+            });
+        }
+    });
+
+    const refreshSub = DeviceEventEmitter.addListener('REFRESH_ORDERS', () => {
+        fetchOrders();
+    });
+
+    return () => {
+        sub.remove();
+        refreshSub.remove();
+    };
+  }, [orders]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchOrders();
+  }, []);
+
+  const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      order.id.includes(search);
+      order.id.includes(search) ||
+      (order.invoiceNumber && order.invoiceNumber.includes(search));
     const matchesTab = activeTab === "All" || order.status === activeTab;
     return matchesSearch && matchesTab;
   });
 
   const handleOpenSheet = useCallback((order: Order) => {
     setSelectedOrder(order);
+    fetchOrderDetails(order.id);
     sheetRef.current?.snapToIndex(0);
   }, []);
 
@@ -134,12 +175,6 @@ export default function OrdersTab() {
     []
   );
 
-  const itemTotal = (order: Order) =>
-    order.items.reduce((sum, item) => {
-      const price = ITEM_PRICES[item.name] ?? 0;
-      return sum + price * item.quantity;
-    }, 0);
-
   return (
     <SafeAreaView style={{ flex: 1 }} className="bg-white dark:bg-background-dark">
       {/* Header */}
@@ -152,25 +187,34 @@ export default function OrdersTab() {
       <SearchInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Search Order ID..."
+        placeholder="Search Order ID or Invoice..."
       />
 
       <FilterTabs tabs={tabs} activeTab={activeTab} onTabPress={setActiveTab} />
 
-      <FlatList
-        data={filteredOrders}
-        keyExtractor={(item) => item.id}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40, paddingTop: 4 }}
-        renderItem={({ item }) => (
-          <OrderCard order={item} onPress={handleOpenSheet} />
-        )}
-        ListEmptyComponent={() => (
-          <View className="items-start px-6 mt-4">
-            <Text className="text-gray-400">No orders found.</Text>
-          </View>
-        )}
-      />
+      {loading && !refreshing ? (
+        <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#c5a059" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredOrders}
+          keyExtractor={(item) => item.id}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 40, paddingTop: 4 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#c5a059"]} />
+          }
+          renderItem={({ item }) => (
+            <OrderCard order={item} onPress={handleOpenSheet} />
+          )}
+          ListEmptyComponent={() => (
+            <View className="items-start px-6 mt-4">
+              <Text className="text-gray-400">No orders found.</Text>
+            </View>
+          )}
+        />
+      )}
 
       {/* Bottom Sheet */}
       <BottomSheet
@@ -192,104 +236,214 @@ export default function OrdersTab() {
           <BottomSheetScrollView
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 48 }}
           >
-            {/* Handle bar area / top header */}
+            {/* Header */}
             <View className="flex-row justify-between items-center mb-5 mt-2">
-              <View>
-                <Text className="text-gray-400 text-xs font-bold tracking-widest">
-                  ORDER #{selectedOrder.id}
-                </Text>
-                <Text className="text-primary dark:text-white text-2xl font-bold mt-1">
+              <View className="flex-1">
+                <View className="flex-row items-center mb-1">
+                    <Text className="text-gray-400 text-xs font-bold tracking-widest mr-2">
+                    ORDER #{selectedOrder.id}
+                    </Text>
+                    {selectedOrder.invoiceNumber && (
+                        <Text className="text-accent text-[10px] font-bold bg-accent/10 px-2 py-0.5 rounded-full mr-2">
+                            INV: {selectedOrder.invoiceNumber}
+                        </Text>
+                    )}
+                </View>
+                <Text className="text-primary dark:text-white text-2xl font-bold">
                   {selectedOrder.customerName}
                 </Text>
                 <View className="flex-row items-center mt-1">
-                  <Ionicons name="restaurant-outline" size={13} color="#c5a059" />
-                  <Text className="text-accent text-sm font-bold ml-1">
-                    Table {selectedOrder.tableNumber}
-                  </Text>
+                  <View className="flex-row items-center mr-4">
+                    <Ionicons name="restaurant-outline" size={13} color="#c5a059" />
+                    <Text className="text-accent text-sm font-bold ml-1">
+                        Table {selectedOrder.tableNumber}
+                    </Text>
+                  </View>
+                  {selectedOrder.customerPhone && (
+                      <TouchableOpacity 
+                        onPress={() => Linking.openURL(`tel:${selectedOrder.customerPhone}`)}
+                        className="flex-row items-center"
+                      >
+                        <Ionicons name="call-outline" size={13} color="#9CA3AF" />
+                        <Text className="text-gray-400 text-sm ml-1">
+                            {selectedOrder.customerPhone}
+                        </Text>
+                      </TouchableOpacity>
+                  )}
                 </View>
+                {selectedOrder.billingAddress && (
+                    <View className="flex-row items-center mt-1">
+                        <Ionicons name="location-outline" size={13} color="#9CA3AF" />
+                        <Text className="text-gray-400 text-xs ml-1 flex-1" numberOfLines={1}>
+                            {selectedOrder.billingAddress}
+                        </Text>
+                    </View>
+                )}
+                {selectedOrder.billingDate && (
+                    <View className="flex-row items-center mt-1">
+                        <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
+                        <Text className="text-gray-400 text-[10px] ml-1">
+                            Billing Date: {selectedOrder.billingDate}
+                        </Text>
+                    </View>
+                )}
               </View>
               <View className="items-end">
                 <StatusBadge status={selectedOrder.status} />
                 <View className="flex-row items-center mt-2">
                   <Ionicons name="time-outline" size={13} color="#9CA3AF" />
-                  <Text className="text-gray-400 text-xs ml-1">
-                    {selectedOrder.time}
-                  </Text>
+                  <TimeAgoText 
+                    date={selectedOrder.billingDate || ""} 
+                    time={selectedOrder.time} 
+                    style="text-rose-500 font-bold text-xs ml-1"
+                  />
                 </View>
               </View>
             </View>
 
-            {/* Divider */}
             <View className="h-px bg-gray-100 dark:bg-gray-800 mb-5" />
 
             {/* Order Items */}
             <Text className="text-gray-400 text-xs font-bold tracking-widest mb-4">
               ORDER ITEMS
             </Text>
-            {selectedOrder.items.map((item, idx) => {
-              const price = ITEM_PRICES[item.name] ?? 0;
-              return (
-                <View
-                  key={idx}
-                  className="flex-row justify-between items-center mb-3 bg-gray-50 dark:bg-gray-900 rounded-2xl px-4 py-3"
-                >
-                  <View className="flex-row items-center flex-1">
-                    <View className="w-8 h-8 bg-accent/10 rounded-xl items-center justify-center mr-3">
-                      <Text className="text-accent font-bold text-sm">
-                        {item.quantity}x
+            
+            {itemsLoading ? (
+                <ActivityIndicator color="#c5a059" className="my-10" />
+            ) : selectedOrderItems.length > 0 ? (
+                selectedOrderItems.map((item, idx) => (
+                    <View
+                      key={idx}
+                      className="flex-row justify-between items-center mb-3 bg-gray-50 dark:bg-gray-900 rounded-2xl px-4 py-3"
+                    >
+                      <View className="flex-row items-center flex-1">
+                        <View className="w-8 h-8 bg-accent/10 rounded-xl items-center justify-center mr-3">
+                          <Text className="text-accent font-bold text-sm">
+                            {item.menuqty}x
+                          </Text>
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-primary dark:text-white font-medium text-base">
+                            {item.ProductName}
+                            </Text>
+                            {item.variantName && (
+                                <Text className="text-gray-400 text-xs">
+                                    {item.variantName}
+                                </Text>
+                            )}
+                            {item.notes && (
+                                <Text className="text-rose-500 text-[10px] font-bold mt-0.5">
+                                    Note: {item.notes}
+                                </Text>
+                            )}
+                            {item.addons && item.addons.length > 0 && (
+                                <View className="mt-1 flex-row flex-wrap">
+                                    {item.addons.map((addon: any, aIdx: number) => (
+                                        <View key={aIdx} className="bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded-md mr-1 mb-1">
+                                            <Text className="text-[10px] text-gray-600 dark:text-gray-400">
+                                                +{addon.quantity} {addon.name}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                      </View>
+                      <Text className="text-primary dark:text-white font-bold">
+                        ${(parseFloat(item.price) * parseFloat(item.menuqty)).toFixed(2)}
                       </Text>
                     </View>
-                    <Text className="text-primary dark:text-white font-medium text-base flex-1">
-                      {item.name}
-                    </Text>
-                  </View>
-                  <Text className="text-primary dark:text-white font-bold">
-                    ${(price * item.quantity).toFixed(2)}
-                  </Text>
+                  ))
+            ) : (
+                <Text className="text-gray-400 mb-10 text-center">No items found for this order.</Text>
+            )}
+
+            {/* Billing Summary */}
+            <View className="bg-gray-50 dark:bg-gray-900/50 rounded-3xl p-5 mb-6">
+                <View className="flex-row justify-between items-center mb-2">
+                    <Text className="text-gray-500 text-sm">Subtotal</Text>
+                    <Text className="text-primary dark:text-white font-medium">{selectedOrder.subtotal}</Text>
                 </View>
-              );
-            })}
-
-            {/* Total */}
-            <View className="flex-row justify-between items-center mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 mb-6">
-              <Text className="text-gray-500 font-medium">Subtotal</Text>
-              <Text className="text-primary dark:text-white font-bold text-xl">
-                {selectedOrder.total}
-              </Text>
+                {parseFloat(selectedOrder.vat?.replace('$', '') || '0') > 0 && (
+                    <View className="flex-row justify-between items-center mb-2">
+                        <Text className="text-gray-500 text-sm">VAT</Text>
+                        <Text className="text-primary dark:text-white font-medium">{selectedOrder.vat}</Text>
+                    </View>
+                )}
+                {parseFloat(selectedOrder.serviceCharge?.replace('$', '') || '0') > 0 && (
+                    <View className="flex-row justify-between items-center mb-2">
+                        <Text className="text-gray-500 text-sm">Service Charge</Text>
+                        <Text className="text-primary dark:text-white font-medium">{selectedOrder.serviceCharge}</Text>
+                    </View>
+                )}
+                {parseFloat(selectedOrder.discount?.replace('$', '') || '0') > 0 && (
+                    <View className="flex-row justify-between items-center mb-2">
+                        <Text className="text-rose-500 text-sm">Discount</Text>
+                        <Text className="text-rose-500 font-medium">-{selectedOrder.discount}</Text>
+                    </View>
+                )}
+                <View className="h-px bg-gray-200 dark:bg-gray-800 my-3" />
+                <View className="flex-row justify-between items-center mb-2">
+                    <Text className="text-primary dark:text-white font-bold text-lg">Grand Total</Text>
+                    <Text className="text-accent font-bold text-2xl">{selectedOrder.total}</Text>
+                </View>
+                
+                <View className="h-px bg-gray-200 dark:bg-gray-800 my-3" />
+                
+                <View className="flex-row justify-between items-center mb-2">
+                    <Text className="text-gray-500 text-sm">Customer Paid Amount</Text>
+                    <Text className="text-primary dark:text-white font-medium">{selectedOrder.customerPaid}</Text>
+                </View>
+                <View className="flex-row justify-between items-center">
+                    <Text className="text-gray-500 text-sm">Change Due</Text>
+                    <Text className="text-primary dark:text-white font-medium">{selectedOrder.changeDue}</Text>
+                </View>
             </View>
 
-            {/* Swipe up hint (only shows at first snap) */}
-            <View className="bg-accent/10 rounded-2xl p-4 mb-6 flex-row items-center">
-              <Ionicons name="arrow-up" size={16} color="#c5a059" />
-              <Text className="text-accent text-sm ml-2 font-medium">
-                Pull up for full details
-              </Text>
-            </View>
+            {/* Action Buttons Grid */}
+            <View className="flex-row flex-wrap justify-between">
+              <TouchableOpacity
+                className="w-[48%] h-14 bg-emerald-500 rounded-2xl flex-row items-center justify-center mb-3 shadow-lg shadow-emerald-500/20"
+              >
+                <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                <Text className="text-white font-bold ml-2 text-xs">Accept Order</Text>
+              </TouchableOpacity>
 
-            {/* Action Buttons */}
-            <View className="flex-row">
+              <TouchableOpacity
+                className="w-[48%] h-14 bg-rose-500 rounded-2xl flex-row items-center justify-center mb-3 shadow-lg shadow-rose-500/20"
+              >
+                <Ionicons name="close-circle-outline" size={20} color="white" />
+                <Text className="text-white font-bold ml-2 text-xs">Cancel Order</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="w-[48%] h-14 bg-indigo-500 rounded-2xl flex-row items-center justify-center mb-3 shadow-lg shadow-indigo-500/20"
+              >
+                <Ionicons name="card-outline" size={20} color="white" />
+                <Text className="text-white font-bold ml-2 text-xs">Make Payment</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="w-[48%] h-14 bg-amber-500 rounded-2xl flex-row items-center justify-center mb-3 shadow-lg shadow-amber-500/20"
+              >
+                <Ionicons name="print-outline" size={20} color="white" />
+                <Text className="text-white font-bold ml-2 text-xs">POS Invoice</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="w-full h-14 bg-purple-600 rounded-2xl flex-row items-center justify-center mb-3 shadow-lg shadow-purple-600/20"
+              >
+                <Ionicons name="gift-outline" size={20} color="white" />
+                <Text className="text-white font-bold ml-2">Payment with Gift Card</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 onPress={handleCloseSheet}
-                className="flex-1 mr-3 h-14 bg-gray-100 dark:bg-gray-800 rounded-2xl items-center justify-center"
+                className="w-full h-14 bg-gray-100 dark:bg-gray-800 rounded-2xl items-center justify-center mt-2"
               >
                 <Text className="text-gray-600 dark:text-gray-300 font-bold">
-                  Close
+                  Close Details
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 h-14 bg-primary rounded-2xl items-center justify-center"
-              >
-                <Text className="text-white font-bold">Mark Ready</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Extra buttons visible when pulled to full */}
-            <View className="mt-3">
-              <TouchableOpacity className="h-14 bg-accent/10 border border-accent/30 rounded-2xl items-center justify-center mb-3">
-                <Text className="text-accent font-bold">Print Receipt</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="h-14 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl items-center justify-center">
-                <Text className="text-rose-500 font-bold">Cancel Order</Text>
               </TouchableOpacity>
             </View>
           </BottomSheetScrollView>

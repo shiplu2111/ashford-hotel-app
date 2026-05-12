@@ -1,14 +1,52 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Image } from "react-native";
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Typography } from "../../constants/Typography";
+import { ENDPOINTS } from "../../constants/Api";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSendOTP = async () => {
+    if (!email) {
+      Alert.alert("Error", "Please enter your email address");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(ENDPOINTS.ADMIN_FORGOT_PASSWORD, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.status === "success" || data.status === "ok") {
+        Alert.alert("OTP Sent", "A 4-digit verification code has been sent to your email.");
+        router.push({
+          pathname: "/(auth)/otp",
+          params: { email }
+        });
+      } else {
+        Alert.alert("Error", data.message || "Failed to send OTP");
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Unable to connect to the server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-background-dark">
@@ -28,7 +66,7 @@ export default function ForgotPasswordScreen() {
           />
           <Text className={`${Typography.h1} text-primary dark:text-white`}>Forgot Password</Text>
           <Text className="text-gray-500 mt-2">
-            Enter your email address and we'll send you an OTP to reset your password.
+            Enter your email address to receive a 4-digit verification code.
           </Text>
         </View>
 
@@ -37,11 +75,14 @@ export default function ForgotPasswordScreen() {
           placeholder="example@mail.com"
           icon="mail-outline"
           keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
 
         <Button 
-          title="Send OTP" 
-          onPress={() => router.push("/(auth)/otp")} 
+          title={loading ? "Sending..." : "Send OTP"} 
+          onPress={handleSendOTP} 
+          disabled={loading}
           className="mt-6"
         />
       </View>
