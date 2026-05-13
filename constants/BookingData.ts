@@ -1,4 +1,9 @@
-export type BookingStatus = "Pending" | "Confirmed" | "Checked In" | "Checked Out" | "Cancelled";
+export type BookingStatus =
+  | "Pending"
+  | "Confirmed"
+  | "Checked In"
+  | "Checked Out"
+  | "Cancelled";
 export type PaymentStatus = "Paid" | "Partial" | "Unpaid";
 export type RoomType = "Standard" | "Deluxe" | "Suite" | "Presidential";
 
@@ -46,20 +51,144 @@ export interface Booking {
 }
 
 export const MOCK_GUESTS: Guest[] = [
-  { id: "G001", name: "James Wilson", email: "j.wilson@email.com", phone: "+44 7911 123456", nationality: "British", idType: "Passport", idNumber: "GBR123456", avatar: "https://i.pravatar.cc/150?u=g001" },
-  { id: "G002", name: "Sarah Mitchell", email: "s.mitchell@email.com", phone: "+1 310 555 0199", nationality: "American", idType: "Passport", idNumber: "USA654321", avatar: "https://i.pravatar.cc/150?u=g002" },
-  { id: "G003", name: "Yuki Tanaka", email: "y.tanaka@email.com", phone: "+81 3-1234-5678", nationality: "Japanese", idType: "Passport", idNumber: "JPN987654", avatar: "https://i.pravatar.cc/150?u=g003" },
-  { id: "G004", name: "Marco Rossi", email: "m.rossi@email.com", phone: "+39 06 1234567", nationality: "Italian", idType: "National ID", idNumber: "ITA111222", avatar: "https://i.pravatar.cc/150?u=g004" },
-  { id: "G005", name: "Emma Larsson", email: "e.larsson@email.com", phone: "+46 8-123 456", nationality: "Swedish", idType: "Passport", idNumber: "SWE333444", avatar: "https://i.pravatar.cc/150?u=g005" },
+  {
+    id: "G001",
+    name: "James Wilson",
+    email: "j.wilson@email.com",
+    phone: "+44 7911 123456",
+    nationality: "British",
+    idType: "Passport",
+    idNumber: "GBR123456",
+    avatar: "https://i.pravatar.cc/150?u=g001",
+  },
+  {
+    id: "G002",
+    name: "Sarah Mitchell",
+    email: "s.mitchell@email.com",
+    phone: "+1 310 555 0199",
+    nationality: "American",
+    idType: "Passport",
+    idNumber: "USA654321",
+    avatar: "https://i.pravatar.cc/150?u=g002",
+  },
+  {
+    id: "G003",
+    name: "Yuki Tanaka",
+    email: "y.tanaka@email.com",
+    phone: "+81 3-1234-5678",
+    nationality: "Japanese",
+    idType: "Passport",
+    idNumber: "JPN987654",
+    avatar: "https://i.pravatar.cc/150?u=g003",
+  },
+  {
+    id: "G004",
+    name: "Marco Rossi",
+    email: "m.rossi@email.com",
+    phone: "+39 06 1234567",
+    nationality: "Italian",
+    idType: "National ID",
+    idNumber: "ITA111222",
+    avatar: "https://i.pravatar.cc/150?u=g004",
+  },
+  {
+    id: "G005",
+    name: "Emma Larsson",
+    email: "e.larsson@email.com",
+    phone: "+46 8-123 456",
+    nationality: "Swedish",
+    idType: "Passport",
+    idNumber: "SWE333444",
+    avatar: "https://i.pravatar.cc/150?u=g005",
+  },
 ];
 
 export const MOCK_ROOMS: Room[] = [
-  { id: "R101", number: "101", type: "Standard", floor: 1, capacity: 2, pricePerNight: 180, amenities: ["WiFi", "TV", "AC", "Mini Bar"], isAvailable: false, image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400" },
-  { id: "R205", number: "205", type: "Deluxe", floor: 2, capacity: 2, pricePerNight: 280, amenities: ["WiFi", "TV", "AC", "Mini Bar", "Balcony", "City View"], isAvailable: true, image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400" },
-  { id: "R310", number: "310", type: "Suite", floor: 3, capacity: 4, pricePerNight: 520, amenities: ["WiFi", "TV", "AC", "Mini Bar", "Balcony", "Ocean View", "Jacuzzi", "Kitchenette"], isAvailable: true, image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400" },
-  { id: "R401", number: "401", type: "Presidential", floor: 4, capacity: 6, pricePerNight: 1200, amenities: ["WiFi", "TV", "AC", "Mini Bar", "Private Pool", "Butler", "Ocean View", "Jacuzzi", "Kitchen"], isAvailable: true, image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400" },
-  { id: "R112", number: "112", type: "Standard", floor: 1, capacity: 2, pricePerNight: 180, amenities: ["WiFi", "TV", "AC"], isAvailable: true, image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400" },
-  { id: "R220", number: "220", type: "Deluxe", floor: 2, capacity: 3, pricePerNight: 320, amenities: ["WiFi", "TV", "AC", "Mini Bar", "Garden View"], isAvailable: false, image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400" },
+  {
+    id: "R101",
+    number: "101",
+    type: "Standard",
+    floor: 1,
+    capacity: 2,
+    pricePerNight: 180,
+    amenities: ["WiFi", "TV", "AC", "Mini Bar"],
+    isAvailable: false,
+    image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400",
+  },
+  {
+    id: "R205",
+    number: "205",
+    type: "Deluxe",
+    floor: 2,
+    capacity: 2,
+    pricePerNight: 280,
+    amenities: ["WiFi", "TV", "AC", "Mini Bar", "Balcony", "City View"],
+    isAvailable: true,
+    image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400",
+  },
+  {
+    id: "R310",
+    number: "310",
+    type: "Suite",
+    floor: 3,
+    capacity: 4,
+    pricePerNight: 520,
+    amenities: [
+      "WiFi",
+      "TV",
+      "AC",
+      "Mini Bar",
+      "Balcony",
+      "Ocean View",
+      "Jacuzzi",
+      "Kitchenette",
+    ],
+    isAvailable: true,
+    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400",
+  },
+  {
+    id: "R401",
+    number: "401",
+    type: "Presidential",
+    floor: 4,
+    capacity: 6,
+    pricePerNight: 1200,
+    amenities: [
+      "WiFi",
+      "TV",
+      "AC",
+      "Mini Bar",
+      "Private Pool",
+      "Butler",
+      "Ocean View",
+      "Jacuzzi",
+      "Kitchen",
+    ],
+    isAvailable: true,
+    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400",
+  },
+  {
+    id: "R112",
+    number: "112",
+    type: "Standard",
+    floor: 1,
+    capacity: 2,
+    pricePerNight: 180,
+    amenities: ["WiFi", "TV", "AC"],
+    isAvailable: true,
+    image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400",
+  },
+  {
+    id: "R220",
+    number: "220",
+    type: "Deluxe",
+    floor: 2,
+    capacity: 3,
+    pricePerNight: 320,
+    amenities: ["WiFi", "TV", "AC", "Mini Bar", "Garden View"],
+    isAvailable: false,
+    image: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400",
+  },
 ];
 
 export const MOCK_BOOKINGS: Booking[] = [

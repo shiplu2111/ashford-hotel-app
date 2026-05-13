@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, usePathname, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Alert, BackHandler, Platform, Text, View } from "react-native";
 import {
@@ -11,6 +11,8 @@ import { useTheme } from "../../hooks/useTheme";
 export default function TabLayout() {
   const { colors } = useTheme();
   const { pendingCount } = useOrderNotifications();
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -20,15 +22,21 @@ export default function TabLayout() {
 
   useEffect(() => {
     const backAction = () => {
-      Alert.alert("Exit App", "Are you sure you want to exit the app?", [
-        {
-          text: "Cancel",
-          onPress: () => null,
-          style: "cancel",
-        },
-        { text: "YES", onPress: () => BackHandler.exitApp() },
-      ]);
-      return true;
+      // Only show exit alert if we are on the Home tab
+      if (pathname === "/" || pathname === "/index") {
+        Alert.alert("Exit App", "Are you sure you want to exit the app?", [
+          {
+            text: "Cancel",
+            onPress: () => null,
+            style: "cancel",
+          },
+          { text: "YES", onPress: () => BackHandler.exitApp() },
+        ]);
+        return true;
+      }
+      
+      // For all other pages, let the default back behavior happen
+      return false;
     };
 
     const backHandler = BackHandler.addEventListener(
@@ -37,7 +45,7 @@ export default function TabLayout() {
     );
 
     return () => backHandler.remove();
-  }, []);
+  }, [pathname]);
 
   return (
     <Tabs
