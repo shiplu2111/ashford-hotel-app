@@ -21,4 +21,6 @@ export const ENDPOINTS = {
    ADMIN_CHECK_IN: `${API_BASE}/admin-api/check-in`,
    ADMIN_CHECK_OUT: `${API_BASE}/admin-api/check-out`,
    ADMIN_VALIDATE_GIFT_CARD: `${API_BASE}/admin-api/validate-gift-card`,
+   ADMIN_CANCEL_BOOKING: `${API_BASE}/admin-api/cancel-booking`,
+   ADMIN_RELEASE_BOOKING: `${API_BASE}/admin-api/release-booking`,
  };

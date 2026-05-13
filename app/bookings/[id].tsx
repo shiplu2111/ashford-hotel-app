@@ -106,6 +106,12 @@ export default function BookingDetailsScreen() {
     applied_gift_card_code: ""
   });
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelForm, setCancelForm] = useState({
+    reason: "",
+    charge: "0"
+  });
+
   const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
@@ -297,6 +303,68 @@ export default function BookingDetailsScreen() {
     }
   };
 
+  const handleCancelBooking = async () => {
+    if (!cancelForm.reason) return Alert.alert("Error", "Please provide a reason for cancellation");
+    try {
+      setFormLoading(true);
+      const response = await fetch(ENDPOINTS.ADMIN_CANCEL_BOOKING, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookedid: booking?.real_id,
+          cancel_reason: cancelForm.reason,
+          cancellation_charge: cancelForm.charge
+        })
+      });
+      const result = await response.json();
+      if (result.status === "success") {
+        Alert.alert("Success", "Booking cancelled successfully");
+        setShowCancelModal(false);
+        fetchDetails();
+      } else {
+        Alert.alert("Error", result.message);
+      }
+    } catch (e) {
+      Alert.alert("Error", "Failed to cancel booking");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleReleaseBooking = async () => {
+    Alert.alert(
+      "Release Booking",
+      "Are you sure you want to release this booking? This will free up the room.",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes, Release",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const response = await fetch(ENDPOINTS.ADMIN_RELEASE_BOOKING, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bookedid: booking?.real_id, release_status: 0 })
+              });
+              const result = await response.json();
+              if (result.status === "success") {
+                Alert.alert("Success", "Booking released successfully");
+                fetchDetails();
+              } else {
+                Alert.alert("Error", result.message);
+              }
+            } catch (e) {
+              Alert.alert("Error", "Failed to release booking");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleOpenAction = () => {
     fetchRoomTypes();
     fetchPaymentMethods();
@@ -432,14 +500,73 @@ export default function BookingDetailsScreen() {
               </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            onPress={() => Alert.alert("Cancel Booking", "Are you sure you want to cancel?", [{ text: "No" }, { text: "Yes", style: "destructive" }])}
-            className="h-16 rounded-2xl items-center justify-center border border-rose-200 dark:border-rose-800"
-          >
-            <Text className="text-rose-500 font-bold text-sm uppercase">Cancel Booking</Text>
-          </TouchableOpacity>
+          <View className="flex-row space-x-3">
+            <TouchableOpacity
+                onPress={handleReleaseBooking}
+                className="flex-1 h-16 rounded-2xl items-center justify-center border border-amber-200 dark:border-amber-800"
+            >
+                <Text className="text-amber-600 font-bold text-sm uppercase">Release</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => setShowCancelModal(true)}
+                className="flex-1 h-16 rounded-2xl items-center justify-center border border-rose-200 dark:border-rose-800"
+            >
+                <Text className="text-rose-500 font-bold text-sm uppercase">Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
+
+      {/* Cancellation Modal */}
+      <Modal visible={showCancelModal} animationType="slide" transparent>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-white dark:bg-background-dark rounded-t-[40px] h-[60%] p-6">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className={`${Typography.h2} dark:text-white`}>Cancel Booking</Text>
+              <TouchableOpacity onPress={() => setShowCancelModal(false)}>
+                <Ionicons name="close-circle" size={32} color={isDark ? "#fff" : "#000"} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="mb-4">
+                <Text className="text-gray-400 text-[10px] font-bold uppercase mb-2">Cancellation Reason</Text>
+                <TextInput
+                  value={cancelForm.reason}
+                  onChangeText={(t) => setCancelForm({ ...cancelForm, reason: t })}
+                  placeholder="Enter reason for cancellation"
+                  multiline
+                  numberOfLines={3}
+                  className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl dark:text-white text-sm min-h-[100px]"
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View className="mb-6">
+                <Text className="text-gray-400 text-[10px] font-bold uppercase mb-2">Cancellation Charge (Optional)</Text>
+                <TextInput
+                  value={cancelForm.charge}
+                  keyboardType="numeric"
+                  onChangeText={(t) => setCancelForm({ ...cancelForm, charge: t })}
+                  className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-xl dark:text-white font-bold border border-rose-100 dark:border-rose-800"
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={handleCancelBooking}
+                disabled={formLoading}
+                className="bg-rose-500 h-16 rounded-2xl items-center justify-center shadow-lg shadow-rose-200 mb-10"
+              >
+                {formLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="text-white font-black text-base uppercase tracking-widest">Confirm Cancellation</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal Section */}
       <Modal visible={showCheckInModal} animationType="slide" transparent>
