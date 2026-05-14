@@ -23,4 +23,9 @@ export const ENDPOINTS = {
    ADMIN_VALIDATE_GIFT_CARD: `${API_BASE}/admin-api/validate-gift-card`,
    ADMIN_CANCEL_BOOKING: `${API_BASE}/admin-api/cancel-booking`,
    ADMIN_RELEASE_BOOKING: `${API_BASE}/admin-api/release-booking`,
- };
+   ADMIN_BOOKING_INVOICE: (id: string) => `${API_BASE}/admin-api/booking-invoice/${id}`,
+   ADMIN_CHECK_NEW_BOOKINGS: `${API_BASE}/admin-api/check-new-bookings`,
+   ADMIN_DASHBOARD_SUMMARY: `${API_BASE}/admin-api/dashboard-summary`,
+   ADMIN_UPDATE_PROFILE: `${API_BASE}/admin-api/update-profile`,
+   ADMIN_UPDATE_PASSWORD: `${API_BASE}/admin-api/update-password`,
+};

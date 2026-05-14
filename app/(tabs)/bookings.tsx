@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MOCK_BOOKINGS, Booking, BookingStatus } from "../../constants/BookingData";
 import { BookingCard } from "../../components/booking/BookingCard";
@@ -91,9 +91,16 @@ export default function BookingsScreen() {
     }
   };
 
-  React.useEffect(() => {
-    fetchBookings();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchBookings();
+      
+      // Real-time update every 30 seconds
+      const interval = setInterval(fetchBookings, 30000);
+      
+      return () => clearInterval(interval);
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -123,13 +130,13 @@ export default function BookingsScreen() {
           <Text className="text-gray-400 text-sm">Ashford Hotel</Text>
           <Text className={`${Typography.h3} text-primary dark:text-white`}>Bookings</Text>
         </View>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={() => router.push("/bookings/new")}
           className="flex-row items-center bg-accent px-4 py-2.5 rounded-2xl"
         >
           <Ionicons name="add" size={18} color="#fff" />
           <Text className="text-white font-bold text-sm ml-1">Add New</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Stats Row */}

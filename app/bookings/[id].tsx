@@ -112,6 +112,10 @@ export default function BookingDetailsScreen() {
     charge: "0"
   });
 
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+
   const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
@@ -365,6 +369,24 @@ export default function BookingDetailsScreen() {
     );
   };
 
+  const handleFetchInvoice = async () => {
+    try {
+        setInvoiceLoading(true);
+        const response = await fetch(ENDPOINTS.ADMIN_BOOKING_INVOICE(booking?.real_id || ""));
+        const result = await response.json();
+        if (result.status === "success") {
+            setInvoiceData(result.data);
+            setShowInvoiceModal(true);
+        } else {
+            Alert.alert("Error", result.message || "Failed to fetch invoice");
+        }
+    } catch (e) {
+        Alert.alert("Error", "Network request failed");
+    } finally {
+        setInvoiceLoading(false);
+    }
+  };
+
   const handleOpenAction = () => {
     fetchRoomTypes();
     fetchPaymentMethods();
@@ -485,6 +507,28 @@ export default function BookingDetailsScreen() {
             <Text className="text-primary dark:text-white font-black uppercase text-xs tracking-tighter">Balance Due</Text>
             <Text className="text-rose-500 font-black text-lg">${(booking.totalAmount - booking.paidAmount).toFixed(2)}</Text>
           </View>
+
+          {/* Payment Breakdown */}
+          {booking.paymentBreakdown && booking.paymentBreakdown.length > 0 && (
+            <View className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <Text className="text-gray-400 text-[10px] font-bold uppercase mb-3">Transaction History</Text>
+              {booking.paymentBreakdown.map((pay: any, idx: number) => (
+                <View key={idx} className="flex-row justify-between items-start mb-3 last:mb-0">
+                  <View className="flex-1 mr-2">
+                    <View className="flex-row items-center">
+                      <View className={`w-1.5 h-1.5 rounded-full mr-2 ${pay.type === 'Gift Card' ? 'bg-accent' : 'bg-emerald-500'}`} />
+                      <Text className="text-primary dark:text-white text-xs font-bold">{pay.type}</Text>
+                    </View>
+                    {pay.details ? (
+                       <Text className="text-gray-500 text-[10px] mt-0.5 ml-3" numberOfLines={1}>{pay.details}</Text>
+                    ) : null}
+                    <Text className="text-gray-400 text-[9px] ml-3 italic">{pay.date}</Text>
+                  </View>
+                  <Text className="text-primary dark:text-white text-xs font-black">+${pay.amount.toFixed(2)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Actions */}
@@ -500,20 +544,39 @@ export default function BookingDetailsScreen() {
               </Text>
             </TouchableOpacity>
           )}
-          <View className="flex-row space-x-3">
-            <TouchableOpacity
-                onPress={handleReleaseBooking}
-                className="flex-1 h-16 rounded-2xl items-center justify-center border border-amber-200 dark:border-amber-800"
-            >
-                <Text className="text-amber-600 font-bold text-sm uppercase">Release</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                onPress={() => setShowCancelModal(true)}
-                className="flex-1 h-16 rounded-2xl items-center justify-center border border-rose-200 dark:border-rose-800"
-            >
-                <Text className="text-rose-500 font-bold text-sm uppercase">Cancel</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            onPress={handleFetchInvoice}
+            disabled={invoiceLoading}
+            className="bg-primary dark:bg-accent h-16 rounded-3xl flex-row items-center justify-center mb-4 shadow-xl shadow-primary/40"
+          >
+            {invoiceLoading ? (
+                <ActivityIndicator color="#fff" />
+            ) : (
+                <>
+                    <Ionicons name="receipt" size={24} color="#fff" className="mr-2" />
+                    <Text className="text-white font-black text-base uppercase tracking-widest ml-2">View Invoice</Text>
+                </>
+            )}
+          </TouchableOpacity>
+
+          {booking.bookingStatus !== "Checked Out" && (
+            <View className="flex-row space-x-3">
+                {booking.paidAmount <= 0 && (
+                    <TouchableOpacity
+                        onPress={handleReleaseBooking}
+                        className="flex-1 h-16 rounded-2xl items-center justify-center border border-amber-200 dark:border-amber-800"
+                    >
+                        <Text className="text-amber-600 font-bold text-sm uppercase">Release</Text>
+                    </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                    onPress={() => setShowCancelModal(true)}
+                    className="flex-1 h-16 rounded-2xl items-center justify-center border border-rose-200 dark:border-rose-800"
+                >
+                    <Text className="text-rose-500 font-bold text-sm uppercase">Cancel</Text>
+                </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -712,6 +775,156 @@ export default function BookingDetailsScreen() {
                 )}
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Invoice Modal */}
+      <Modal visible={showInvoiceModal} animationType="slide" transparent>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-white dark:bg-background-dark rounded-t-[40px] h-[90%] p-6">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className={`${Typography.h2} dark:text-white`}>Booking Invoice</Text>
+              <TouchableOpacity onPress={() => setShowInvoiceModal(false)}>
+                <Ionicons name="close-circle" size={32} color={isDark ? "#fff" : "#000"} />
+              </TouchableOpacity>
+            </View>
+
+            {invoiceData && (
+              <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                <View className="items-center mb-6">
+                  <Text className="text-primary dark:text-white font-black text-xl">{invoiceData.storeinfo?.storename}</Text>
+                  <Text className="text-gray-500 text-xs text-center mt-1">{invoiceData.storeinfo?.address}</Text>
+                  <Text className="text-gray-500 text-xs mt-1">Phone: {invoiceData.storeinfo?.phone}</Text>
+                </View>
+
+                <View className="bg-gray-50 dark:bg-gray-800/50 p-5 rounded-3xl mb-4">
+                  <View className="flex-row justify-between mb-2">
+                    <Text className="text-gray-400 text-[10px] font-bold uppercase">Booking No</Text>
+                    <Text className="text-gray-400 text-[10px] font-bold uppercase">Date</Text>
+                  </View>
+                  <View className="flex-row justify-between">
+                    <Text className="text-primary dark:text-white font-bold">#{invoiceData.bookinfo?.booking_number}</Text>
+                    <Text className="text-primary dark:text-white font-bold">{invoiceData.bookinfo?.date_time}</Text>
+                  </View>
+                </View>
+
+                <View className="mb-4 px-2">
+                   <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-3">Guest Details</Text>
+                   <Text className="text-primary dark:text-white font-bold">{invoiceData.customerinfo?.firstname} {invoiceData.customerinfo?.lastname}</Text>
+                   <Text className="text-gray-500 text-sm mt-1">{invoiceData.customerinfo?.cust_phone}</Text>
+                   <Text className="text-gray-500 text-sm">{invoiceData.customerinfo?.email}</Text>
+                </View>
+
+                <View className="border-t border-gray-100 dark:border-gray-800 pt-4 mb-4">
+                  <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-3">Room Charges</Text>
+                  <View className="flex-row justify-between items-center mb-2">
+                    <View>
+                        <Text className="text-primary dark:text-white font-bold">{invoiceData.bookinfo?.room_names}</Text>
+                        <Text className="text-gray-500 text-xs">Room: {invoiceData.bookinfo?.room_no}</Text>
+                    </View>
+                    <Text className="text-primary dark:text-white font-bold">
+                        {invoiceData.currency?.curr_icon}{parseFloat(invoiceData.bookinfo?.roomrate).toFixed(2)}
+                    </Text>
+                  </View>
+                  
+                  {(() => {
+                      const firstdate = invoiceData.bookinfo.checkindate;
+                      const lastdate = invoiceData.bookinfo.checkoutdate;
+                      const datediff = Math.ceil((new Date(lastdate).getTime() - new Date(firstdate).getTime()) / (1000 * 3600 * 24)) || 1;
+                      const subtotal = parseFloat(invoiceData.bookinfo.roomrate) * datediff;
+                      
+                      return (
+                        <View className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl mt-2">
+                            <View className="flex-row justify-between mb-1">
+                                <Text className="text-gray-500 text-xs">Stay ({datediff} Nights)</Text>
+                                <Text className="text-primary dark:text-white text-xs font-bold">{invoiceData.currency?.curr_icon}{subtotal.toFixed(2)}</Text>
+                            </View>
+                            
+                            {/* Tax Breakdown */}
+                            {Array.isArray(invoiceData.taxinfo) && invoiceData.taxinfo.map((tax: any, index: number) => {
+                                const taxAmount = (subtotal * parseFloat(tax.rate)) / 100;
+                                return (
+                                    <View key={index} className="flex-row justify-between mb-1">
+                                        <Text className="text-gray-500 text-xs">{tax.taxname} ({tax.rate}%)</Text>
+                                        <Text className="text-primary dark:text-white text-xs font-bold">{invoiceData.currency?.curr_icon}{taxAmount.toFixed(2)}</Text>
+                                    </View>
+                                );
+                            })}
+                            
+                            <View className="flex-row justify-between pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
+                                <Text className="text-primary dark:text-white font-bold uppercase text-[10px]">Grand Total</Text>
+                                <Text className="text-accent font-black text-base">
+                                    {invoiceData.currency?.curr_icon}{invoiceData.bookinfo.gross_payable || parseFloat(invoiceData.bookinfo.total_price).toFixed(2)}
+                                </Text>
+                            </View>
+                        </View>
+                      );
+                  })()}
+                </View>
+
+                {/* Payment History */}
+                {Array.isArray(invoiceData.paymentinfo) && invoiceData.paymentinfo.length > 0 && (
+                    <View className="mb-6">
+                        <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-3">Payment History</Text>
+                        {invoiceData.paymentinfo.map((pay: any, idx: number) => (
+                            <View key={idx} className="flex-row justify-between items-center mb-2 bg-emerald-50/50 dark:bg-emerald-900/10 p-3 rounded-xl border border-emerald-100/50 dark:border-emerald-800/50">
+                                <View>
+                                    <Text className="text-primary dark:text-white font-bold text-xs">{pay.payment_method || pay.paymenttype}</Text>
+                                    <Text className="text-gray-500 text-[10px]">{pay.paydate}</Text>
+                                </View>
+                                <Text className="text-emerald-600 font-bold text-sm">
+                                    +{invoiceData.currency?.curr_icon}{parseFloat(pay.paymentamount).toFixed(2)}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {/* Payment Summary Footer */}
+                <View className="mb-6 space-y-3">
+                    <View className="p-5 bg-primary dark:bg-surface-dark rounded-3xl items-center">
+                        <Text className="text-white/60 text-[10px] font-bold uppercase">Total Amount Paid</Text>
+                        <Text className="text-white font-black text-3xl mt-1">
+                            {invoiceData.currency?.curr_icon}{parseFloat(invoiceData.bookinfo.paid_amount || "0").toFixed(2)}
+                        </Text>
+                    </View>
+
+                    {(() => {
+                        const paid = parseFloat(invoiceData.bookinfo.paid_amount || "0");
+                        const total = parseFloat(invoiceData.bookinfo.gross_payable || invoiceData.bookinfo.total_price || "0");
+                        const due = Math.max(0, total - paid);
+                        
+                        if (due > 0.01) {
+                            return (
+                                <View className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl items-center border border-amber-100 dark:border-amber-800/30">
+                                    <Text className="text-amber-600 text-[10px] font-bold uppercase">Balance Due</Text>
+                                    <Text className="text-amber-600 font-black text-2xl">
+                                        {invoiceData.currency?.curr_icon}{due.toFixed(2)}
+                                    </Text>
+                                </View>
+                            );
+                        }
+                        return (
+                            <View className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl items-center border border-emerald-100 dark:border-emerald-800/30">
+                                <View className="flex-row items-center">
+                                    <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                                    <Text className="text-emerald-600 text-[10px] font-bold uppercase ml-1">Fully Paid</Text>
+                                </View>
+                            </View>
+                        );
+                    })()}
+                </View>
+
+                <TouchableOpacity 
+                    onPress={() => setShowInvoiceModal(false)}
+                    className="bg-accent h-16 rounded-2xl items-center justify-center mb-10"
+                >
+                    <Text className="text-white font-black uppercase tracking-widest">Close Invoice</Text>
+                </TouchableOpacity>
+
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>

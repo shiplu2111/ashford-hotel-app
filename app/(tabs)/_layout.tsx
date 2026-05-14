@@ -6,18 +6,36 @@ import {
   registerBackgroundFetch,
   useOrderNotifications,
 } from "../../hooks/useOrderNotifications";
+import { 
+  registerBookingBackgroundFetch, 
+  useBookingNotifications 
+} from "../../hooks/useBookingNotifications";
 import { useTheme } from "../../hooks/useTheme";
+import { BookingNotification } from "../../components/BookingNotification";
+import { DeviceEventEmitter } from "react-native";
+import { useAlertStatus } from "../../hooks/useAlertStatus";
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const { pendingCount } = useOrderNotifications();
+  const { hasUnread } = useAlertStatus();
+  useBookingNotifications(); // Initialize foreground listener
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (Platform.OS !== "web") {
       registerBackgroundFetch();
+      registerBookingBackgroundFetch();
     }
+  }, []);
+
+  useEffect(() => {
+    // Listener for opening booking details from notification
+    const sub = DeviceEventEmitter.addListener('OPEN_BOOKING_DETAILS', (id) => {
+        router.push(`/bookings/${id}`);
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
@@ -48,7 +66,9 @@ export default function TabLayout() {
   }, [pathname]);
 
   return (
-    <Tabs
+    <View className="flex-1">
+      <BookingNotification />
+      <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.icon,
@@ -128,11 +148,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View>
               <Ionicons
-                name={focused ? "notifications" : "notifications-outline"}
+                name={hasUnread || focused ? "notifications" : "notifications-outline"}
                 size={22}
                 color={color}
               />
-              <View className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark" />
+              {hasUnread && (
+                <View className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark" />
+              )}
             </View>
           ),
         }}
@@ -151,5 +173,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }

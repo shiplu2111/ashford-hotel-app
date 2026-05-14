@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SettingsItem } from "../../components/settings/SettingsItem";
 import { Typography } from "../../constants/Typography";
 import { useThemeStore } from "../../store/useThemeStore";
@@ -12,6 +13,32 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { theme, setTheme } = useThemeStore();
   const { isDark } = useTheme();
+
+  const [userName, setUserName] = useState("Admin Ashford");
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  const loadUserData = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setUserName(user.fullname || "Admin Ashford");
+        setAvatarUri(user.image);
+      }
+    } catch (e) {
+      console.error("Load Settings User Error:", e);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [])
+  );
+
+  const displayAvatar = (avatarUri && avatarUri.includes('/') && !avatarUri.endsWith('/')) 
+    ? avatarUri 
+    : `https://ui-avatars.com/api/?name=${userName.replace(' ', '+')}&background=c5a059&color=fff&size=128`;
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-background-dark">
@@ -26,14 +53,14 @@ export default function SettingsScreen() {
           className="flex-row items-center p-5 bg-primary dark:bg-surface-dark rounded-[30px] mb-8"
         >
           <Image
-            source={{ uri: "https://i.pravatar.cc/150?u=ashford" }}
+            source={{ uri: displayAvatar }}
             className="w-16 h-16 rounded-2xl border-2 border-accent"
           />
           <View className="ml-4 flex-1">
-            <Text className="text-white font-bold text-lg">Alexander Ashford</Text>
+            <Text className="text-white font-bold text-lg">{userName}</Text>
             <View className="flex-row items-center mt-1">
               <View className="bg-accent/20 px-2 py-0.5 rounded-md border border-accent/30">
-                <Text className="text-accent text-[10px] font-bold">GENERAL MANAGER</Text>
+                <Text className="text-accent text-[10px] font-bold">ADMINISTRATOR</Text>
               </View>
             </View>
           </View>
@@ -50,7 +77,7 @@ export default function SettingsScreen() {
           <SettingsItem 
             label="Security & Password" 
             icon="lock-closed-outline" 
-            onPress={() => {}} 
+            onPress={() => router.push("/security")} 
           />
           <SettingsItem 
             label="Notification Settings" 
@@ -70,19 +97,20 @@ export default function SettingsScreen() {
             value={isDark}
             onValueChange={(val) => setTheme(val ? "dark" : "light")}
           />
-          <SettingsItem 
-            label="Language" 
-            icon="globe-outline" 
-            type="value"
-            valueText="English (US)"
-            onPress={() => {}} 
-          />
         </View>
 
         <View className="mb-10">
           <Text className="text-gray-400 font-bold text-xs tracking-widest mb-4">SUPPORT</Text>
-          <SettingsItem label="Help Center" icon="help-circle-outline" onPress={() => {}} />
-          <SettingsItem label="About System" icon="information-circle-outline" onPress={() => {}} />
+          <SettingsItem 
+            label="Help Center" 
+            icon="help-circle-outline" 
+            onPress={() => router.push("/help-center")} 
+          />
+          <SettingsItem 
+            label="About System" 
+            icon="information-circle-outline" 
+            onPress={() => router.push("/about")} 
+          />
           
           <TouchableOpacity 
             className="flex-row items-center py-6 mt-4"
@@ -96,3 +124,4 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
+
