@@ -10,6 +10,7 @@ import { ONBOARDING_DATA } from "../constants/OnboardingData";
 import { OnboardingItem } from "../components/OnboardingItem";
 import { Paginator } from "../components/Paginator";
 import { Typography } from "../constants/Typography";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,16 +32,26 @@ export default function OnboardingScreen() {
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
+  const completeOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem("hasViewedOnboarding", "true");
+    } catch (error) {
+      console.log("Error setting onboarding flag:", error);
+    } finally {
+      router.replace("/(auth)/login");
+    }
+  };
+
   const scrollToNext = () => {
     if (currentIndex < ONBOARDING_DATA.length - 1) {
       slidesRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
-      router.replace("/(auth)/welcome");
+      completeOnboarding();
     }
   };
 
   const skip = () => {
-    router.replace("/(auth)/welcome");
+    completeOnboarding();
   };
 
   return (

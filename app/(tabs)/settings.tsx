@@ -114,7 +114,10 @@ export default function SettingsScreen() {
           
           <TouchableOpacity 
             className="flex-row items-center py-6 mt-4"
-            onPress={() => router.replace("/(auth)/welcome")}
+            onPress={async () => {
+              await AsyncStorage.removeItem("user");
+              router.replace("/(auth)/login");
+            }}
           >
             <Ionicons name="log-out-outline" size={24} color="#ef4444" />
             <Text className="text-red-500 font-bold text-base ml-4">Log Out</Text>

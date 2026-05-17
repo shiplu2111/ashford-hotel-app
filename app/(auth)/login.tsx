@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Alert,
   Image,
@@ -18,10 +18,27 @@ import { Typography } from "../../constants/Typography";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@cmsnagro.com.au");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      try {
+        const savedEmail = await AsyncStorage.getItem("savedEmail");
+        const savedPassword = await AsyncStorage.getItem("savedPassword");
+        if (savedEmail && savedPassword) {
+          setEmail(savedEmail);
+          setPassword(savedPassword);
+          setRememberMe(true);
+        }
+      } catch (e) {
+        console.error("Failed to load credentials", e);
+      }
+    };
+    loadSavedCredentials();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -63,6 +80,14 @@ export default function LoginScreen() {
         if (data.user) {
             await AsyncStorage.setItem("user", JSON.stringify(data.user));
         }
+
+        if (rememberMe) {
+          await AsyncStorage.setItem("savedEmail", email);
+          await AsyncStorage.setItem("savedPassword", password);
+        } else {
+          await AsyncStorage.removeItem("savedEmail");
+          await AsyncStorage.removeItem("savedPassword");
+        }
         Alert.alert(
           "Success",
           `Welcome back, ${data.user?.fullname || "Admin"}!`,
@@ -98,16 +123,16 @@ export default function LoginScreen() {
           <Ionicons name="arrow-back" size={24} color="#c5a059" />
         </TouchableOpacity>
 
-        <View className="mt-8 mb-10">
+        <View className="mt-8 mb-10 items-center">
           <Image
             source={require("../../assets/images/T.png")}
-            style={{ width: 150, height: 50, marginBottom: 20 }}
+            style={{ width: 200, height: 80, marginBottom: 20 }}
             resizeMode="contain"
           />
-          <Text className={`${Typography.h1} text-primary dark:text-white`}>
+          <Text className={`${Typography.h1} text-primary dark:text-white text-center`}>
             Welcome Back
           </Text>
-          <Text className="text-gray-500 mt-2">
+          <Text className="text-gray-500 mt-2 text-center">
             Sign in to continue your journey
           </Text>
         </View>

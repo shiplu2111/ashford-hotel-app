@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
-import * as BackgroundTask from 'expo-background-task';
+import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
 import { useAudioPlayer } from 'expo-audio';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,7 +12,8 @@ const BACKGROUND_ORDER_TASK = 'background-order-check';
 // Configure how notifications are handled when the app is foregrounded
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -140,10 +141,10 @@ export function useOrderNotifications() {
 TaskManager.defineTask(BACKGROUND_ORDER_TASK, async () => {
   try {
     const userData = await AsyncStorage.getItem('user');
-    if (!userData) return BackgroundTask.BackgroundFetchResult.NoData;
+    if (!userData) return BackgroundFetch.BackgroundFetchResult.NoData;
     
     const user = JSON.parse(userData);
-    if (user.is_admin != 1) return BackgroundTask.BackgroundFetchResult.NoData;
+    if (user.is_admin != 1) return BackgroundFetch.BackgroundFetchResult.NoData;
 
     let hasNewData = false;
 
@@ -196,10 +197,10 @@ TaskManager.defineTask(BACKGROUND_ORDER_TASK, async () => {
         console.log('BG Order Check Error:', e);
     }
     
-    return hasNewData ? BackgroundTask.BackgroundFetchResult.NewData : BackgroundTask.BackgroundFetchResult.NoData;
+    return hasNewData ? BackgroundFetch.BackgroundFetchResult.NewData : BackgroundFetch.BackgroundFetchResult.NoData;
   } catch (error) {
     console.error('Background Task Master Error:', error);
-    return BackgroundTask.BackgroundFetchResult.Failed;
+    return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
 
@@ -208,7 +209,7 @@ export async function registerBackgroundFetch() {
   try {
     const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_ORDER_TASK);
     if (!isRegistered) {
-        await BackgroundTask.registerTaskAsync(BACKGROUND_ORDER_TASK, {
+        await BackgroundFetch.registerTaskAsync(BACKGROUND_ORDER_TASK, {
             minimumInterval: 15,
         });
     }
