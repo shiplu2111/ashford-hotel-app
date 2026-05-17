@@ -46,7 +46,8 @@
           "enableBackgroundPlayback": true
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

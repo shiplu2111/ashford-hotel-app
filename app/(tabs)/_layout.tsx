@@ -1,34 +1,60 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, usePathname, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Alert, BackHandler, Platform, Text, View } from "react-native";
 import {
   registerBackgroundFetch,
   useOrderNotifications,
 } from "../../hooks/useOrderNotifications";
+import { 
+  registerBookingBackgroundFetch, 
+  useBookingNotifications 
+} from "../../hooks/useBookingNotifications";
 import { useTheme } from "../../hooks/useTheme";
+import { BookingNotification } from "../../components/BookingNotification";
+import { DeviceEventEmitter } from "react-native";
+import { useAlertStatus } from "../../hooks/useAlertStatus";
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const { pendingCount } = useOrderNotifications();
+  const { hasUnread } = useAlertStatus();
+  useBookingNotifications(); // Initialize foreground listener
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     if (Platform.OS !== "web") {
       registerBackgroundFetch();
+      registerBookingBackgroundFetch();
     }
   }, []);
 
   useEffect(() => {
+    // Listener for opening booking details from notification
+    const sub = DeviceEventEmitter.addListener('OPEN_BOOKING_DETAILS', (id) => {
+        router.push(`/bookings/${id}`);
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
     const backAction = () => {
-      Alert.alert("Exit App", "Are you sure you want to exit the app?", [
-        {
-          text: "Cancel",
-          onPress: () => null,
-          style: "cancel",
-        },
-        { text: "YES", onPress: () => BackHandler.exitApp() },
-      ]);
-      return true;
+      // Only show exit alert if we are on the Home tab
+      if (pathname === "/" || pathname === "/index") {
+        Alert.alert("Exit App", "Are you sure you want to exit the app?", [
+          {
+            text: "Cancel",
+            onPress: () => null,
+            style: "cancel",
+          },
+          { text: "YES", onPress: () => BackHandler.exitApp() },
+        ]);
+        return true;
+      }
+      
+      // For all other pages, let the default back behavior happen
+      return false;
     };
 
     const backHandler = BackHandler.addEventListener(
@@ -37,10 +63,12 @@ export default function TabLayout() {
     );
 
     return () => backHandler.remove();
-  }, []);
+  }, [pathname]);
 
   return (
-    <Tabs
+    <View className="flex-1">
+      <BookingNotification />
+      <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.icon,
@@ -120,11 +148,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View>
               <Ionicons
-                name={focused ? "notifications" : "notifications-outline"}
+                name={hasUnread || focused ? "notifications" : "notifications-outline"}
                 size={22}
                 color={color}
               />
-              <View className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark" />
+              {hasUnread && (
+                <View className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark" />
+              )}
             </View>
           ),
         }}
@@ -143,5 +173,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }

@@ -12,8 +12,7 @@ const BACKGROUND_ORDER_TASK = 'background-order-check';
 // Configure how notifications are handled when the app is foregrounded
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
+    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -146,24 +145,60 @@ TaskManager.defineTask(BACKGROUND_ORDER_TASK, async () => {
     const user = JSON.parse(userData);
     if (user.is_admin != 1) return BackgroundTask.BackgroundFetchResult.NoData;
 
-    const response = await fetch(ENDPOINTS.ADMIN_CHECK_NEW_ORDERS);
-    const json = await response.json();
-    
-    if (json.status === 'success' && json.count > 0) {
-        const latestOrder = json.latest_order;
-        await Notifications.scheduleNotificationAsync({
-            content: {
-              title: "PENDING ORDERS! 🚨",
-              body: `You have ${json.count} orders waiting for acceptance.`,
-              data: { orderId: latestOrder?.order_id },
-              sound: true,
-            },
-            trigger: null,
-        });
-        return BackgroundTask.BackgroundFetchResult.NewData;
+    let hasNewData = false;
+
+    // 1. Check for New Bookings (HOTEL)
+    try {
+        const bookingRes = await fetch(ENDPOINTS.ADMIN_CHECK_NEW_BOOKINGS);
+        const bJson = await bookingRes.json();
+        if (bJson.status === 'success' && bJson.latest) {
+            const lastBId = await AsyncStorage.getItem('last_seen_booking_id');
+            const currentBId = bJson.latest.bookedid.toString();
+            
+            if (lastBId !== currentBId) {
+                await AsyncStorage.setItem('last_seen_booking_id', currentBId);
+                await Notifications.scheduleNotificationAsync({
+                    content: {
+                      title: "NEW ROOM RESERVATION! 🏨",
+                      body: `Guest: ${bJson.latest.firstname} booked Room ${bJson.latest.room_no || 'TBA'}.`,
+                      data: { bookedid: bJson.latest.bookedid },
+                      sound: 'default',
+                      priority: Notifications.AndroidNotificationPriority.MAX,
+                    },
+                    trigger: null,
+                });
+                hasNewData = true;
+            }
+        }
+    } catch (e) {
+        console.log('BG Booking Check Error:', e);
     }
-    return BackgroundTask.BackgroundFetchResult.NoData;
+
+    // 2. Check for New Orders (RESTAURANT)
+    try {
+        const response = await fetch(ENDPOINTS.ADMIN_CHECK_NEW_ORDERS);
+        const json = await response.json();
+        if (json.status === 'success' && json.count > 0) {
+            const latestOrder = json.latest_order;
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: "PENDING ORDERS! 🚨",
+                  body: `You have ${json.count} orders waiting for acceptance.`,
+                  data: { orderId: latestOrder?.order_id },
+                  sound: 'default',
+                  priority: Notifications.AndroidNotificationPriority.HIGH,
+                },
+                trigger: null,
+            });
+            hasNewData = true;
+        }
+    } catch (e) {
+        console.log('BG Order Check Error:', e);
+    }
+    
+    return hasNewData ? BackgroundTask.BackgroundFetchResult.NewData : BackgroundTask.BackgroundFetchResult.NoData;
   } catch (error) {
+    console.error('Background Task Master Error:', error);
     return BackgroundTask.BackgroundFetchResult.Failed;
   }
 });

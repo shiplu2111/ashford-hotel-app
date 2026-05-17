@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,30 +7,64 @@ import {
   Image,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Typography } from "../constants/Typography";
 import { Button } from "../components/ui/Button";
 import { useTheme } from "../hooks/useTheme";
+import { ENDPOINTS } from "../constants/Api";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
+  const [loading, setLoading] = useState(true);
 
   const [avatarUri, setAvatarUri] = useState<string>(
-    "https://i.pravatar.cc/150?u=ashford"
+    "https://ui-avatars.com/api/?name=Admin+Ashford&background=c5a059&color=fff&size=128"
   );
+  
   const [form, setForm] = useState({
-    fullName: "Alexander Ashford",
-    email: "a.ashford@luxury-stay.com",
-    phone: "+44 20 7123 4567",
-    staffId: "ASH-GM-001",
-    department: "Administration",
-    joinDate: "Jan 12, 2022",
+    fullName: "",
+    email: "",
+    staffId: "ASH-ADMIN",
+    department: "Management",
+    joinDate: "N/A",
   });
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setForm(prev => ({
+          ...prev,
+          fullName: user.fullname || "Admin Ashford",
+          email: user.email || "",
+        }));
+        
+        if (user.image && user.image.includes('/') && !user.image.endsWith('/')) {
+            setAvatarUri(user.image);
+        } else {
+            // Fallback to initial using fullname
+            const initialName = user.fullname ? user.fullname.replace(' ', '+') : "Admin+Ashford";
+            setAvatarUri(`https://ui-avatars.com/api/?name=${initialName}&background=c5a059&color=fff&size=128`);
+        }
+      }
+    } catch (e) {
+      console.error("Load User Error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -55,6 +89,75 @@ export default function ProfileScreen() {
   const handleChange = (key: keyof typeof form, val: string) => {
     setForm((prev) => ({ ...prev, [key]: val }));
   };
+
+  const handleSave = async () => {
+    if (!form.fullName) {
+      Alert.alert("Error", "Full Name is required");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const userStr = await AsyncStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      
+      const formData = new FormData();
+      formData.append("id", user?.id);
+      formData.append("fullname", form.fullName);
+
+      if (avatarUri && (avatarUri.startsWith("file://") || avatarUri.startsWith("content://"))) {
+        const filename = avatarUri.split("/").pop();
+        const match = /\.(\w+)$/.exec(filename || "");
+        const type = match ? `image/${match[1]}` : `image`;
+        
+        // @ts-ignore
+        formData.append("image", {
+          uri: avatarUri,
+          name: filename || "avatar.jpg",
+          type: type,
+        });
+      }
+
+      const response = await fetch(ENDPOINTS.ADMIN_UPDATE_PROFILE, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
+        body: formData,
+      });
+
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Non-JSON response:", responseText);
+        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
+      }
+
+      if (result.status === "success") {
+        await AsyncStorage.setItem("user", JSON.stringify(result.user));
+        Alert.alert("Success", "Profile updated successfully");
+        router.back();
+      } else {
+        Alert.alert("Error", result.message || "Failed to update profile");
+      }
+    } catch (error: any) {
+      console.error("Save Profile Error:", error);
+      Alert.alert("Update Failed", error.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-white dark:bg-background-dark items-center justify-center">
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-background-dark">
@@ -82,11 +185,11 @@ export default function ProfileScreen() {
               <Ionicons name="camera" size={18} color="#c5a059" />
             </TouchableOpacity>
           </View>
-          <Text className={`${Typography.h3} text-primary dark:text-white mt-3`}>
+          <Text className={`${Typography.h3} text-primary dark:text-white mt-3 text-center`}>
             {form.fullName}
           </Text>
           <View className="bg-accent/10 px-4 py-1.5 rounded-full mt-2 border border-accent/20">
-            <Text className="text-accent font-bold text-xs">GENERAL MANAGER</Text>
+            <Text className="text-accent font-bold text-xs">ADMINISTRATOR</Text>
           </View>
         </View>
 
@@ -104,15 +207,8 @@ export default function ProfileScreen() {
           label="Email Address"
           value={form.email}
           icon="mail-outline"
-          keyboardType="email-address"
-          onChangeText={(v) => handleChange("email", v)}
-        />
-        <ProfileField
-          label="Phone Number"
-          value={form.phone}
-          icon="call-outline"
-          keyboardType="phone-pad"
-          onChangeText={(v) => handleChange("phone", v)}
+          editable={false}
+          onChangeText={() => {}}
         />
 
         {/* Hotel Details */}
@@ -130,19 +226,13 @@ export default function ProfileScreen() {
           label="Department"
           value={form.department}
           icon="business-outline"
-          onChangeText={(v) => handleChange("department", v)}
-        />
-        <ProfileField
-          label="Join Date"
-          value={form.joinDate}
-          icon="calendar-outline"
           editable={false}
           onChangeText={() => {}}
         />
 
         <Button
           title="Save Changes"
-          onPress={() => router.back()}
+          onPress={handleSave}
           className="mt-6 mb-12"
         />
       </ScrollView>
@@ -157,6 +247,7 @@ interface ProfileFieldProps {
   onChangeText: (val: string) => void;
   editable?: boolean;
   keyboardType?: any;
+  secureTextEntry?: boolean;
 }
 
 const ProfileField = ({
@@ -166,6 +257,7 @@ const ProfileField = ({
   onChangeText,
   editable = true,
   keyboardType = "default",
+  secureTextEntry = false,
 }: ProfileFieldProps) => {
   const { isDark } = useTheme();
 
@@ -190,6 +282,7 @@ const ProfileField = ({
           onChangeText={onChangeText}
           editable={editable}
           keyboardType={keyboardType}
+          secureTextEntry={secureTextEntry}
           className="flex-1 text-primary dark:text-white font-medium text-base"
           placeholderTextColor={isDark ? "#4B5563" : "#9CA3AF"}
         />

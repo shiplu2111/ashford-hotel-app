@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Text } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Typography } from "../../constants/Typography";
 
@@ -13,12 +12,7 @@ interface RevenueCardProps {
 export const RevenueCard = ({ amount, percentage, isUp }: RevenueCardProps) => {
   return (
     <View className="px-6 my-4">
-      <LinearGradient
-        colors={["#1a1f2c", "#2d3446"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        className="p-6 rounded-3xl shadow-lg"
-      >
+      <View className="p-6 rounded-3xl bg-[#1a1f2c] shadow-lg">
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-gray-400 font-medium">Total Revenue</Text>
           <View className="p-2 bg-white/10 rounded-xl">
@@ -35,9 +29,9 @@ export const RevenueCard = ({ amount, percentage, isUp }: RevenueCardProps) => {
               {percentage}
             </Text>
           </View>
-          <Text className="text-gray-400 text-xs ml-2">vs last month</Text>
+          <Text className="text-gray-400 text-xs ml-2">Total Accumulated</Text>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 };
