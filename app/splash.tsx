@@ -10,6 +10,7 @@ import Animated, {
   Easing,
   runOnJS,
 } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -30,10 +31,21 @@ export default function SplashScreen() {
     });
   }, []);
 
-  const navigateToNext = () => {
-    setTimeout(() => {
-      router.replace("/onboarding");
-    }, 500);
+  const navigateToNext = async () => {
+    try {
+      const hasViewedOnboarding = await AsyncStorage.getItem("hasViewedOnboarding");
+      setTimeout(() => {
+        if (hasViewedOnboarding === "true") {
+          router.replace("/(auth)/login");
+        } else {
+          router.replace("/onboarding");
+        }
+      }, 500);
+    } catch (error) {
+      setTimeout(() => {
+        router.replace("/onboarding");
+      }, 500);
+    }
   };
 
   const logoStyle = useAnimatedStyle(() => ({

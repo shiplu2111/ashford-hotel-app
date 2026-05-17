@@ -41,7 +41,7 @@ export default function OTPScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch(ENDPOINTS.ADMIN_OTP_LOGIN, {
+      const response = await fetch(ENDPOINTS.ADMIN_VERIFY_OTP, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,8 +55,10 @@ export default function OTPScreen() {
       const data = await response.json();
 
       if (data.status === "success" || data.status === "ok") {
-        Alert.alert("Success", "Verification successful! Welcome back.");
-        router.replace("/(tabs)");
+        router.push({
+            pathname: "/(auth)/reset-password",
+            params: { email, otp: otpCode }
+        });
       } else {
         Alert.alert("Failed", data.message || "Invalid OTP code");
       }

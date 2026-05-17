@@ -5,6 +5,8 @@ export const ENDPOINTS = {
   ADMIN_LOGIN: `${API_BASE}/admin-api/login`,
   ADMIN_FORGOT_PASSWORD: `${API_BASE}/admin-api/forgot-password`,
   ADMIN_OTP_LOGIN: `${API_BASE}/admin-api/otp-login`,
+  ADMIN_VERIFY_OTP: `${API_BASE}/admin-api/verify-otp`,
+  ADMIN_RESET_PASSWORD: `${API_BASE}/admin-api/reset-password`,
   ADMIN_ORDERS: `${API_BASE}/admin-api/orders`,
   ADMIN_ORDER_DETAILS: (id: string) => `${API_BASE}/admin-api/order-details/${id}`,
   ADMIN_CHECK_NEW_ORDERS: `${API_BASE}/admin-api/check-new-orders`,
