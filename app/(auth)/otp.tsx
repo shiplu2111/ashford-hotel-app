@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Text, TouchableOpacity, TextInput, Image, Alert } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, Image, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,32 +72,39 @@ export default function OTPScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-background-dark">
-      <View className="px-6 mt-2">
+      {/* Top Navigation Row */}
+      <View className="px-6 pt-2">
         <TouchableOpacity 
           onPress={() => router.back()} 
           className="mt-4 w-10 h-10 items-center justify-center bg-gray-100 dark:bg-surface-dark rounded-full"
         >
           <Ionicons name="arrow-back" size={24} color="#c5a059" />
         </TouchableOpacity>
+      </View>
 
-        <View className="mt-8 mb-10">
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 60 }}
+        className="px-6"
+      >
+        <View className="mb-10 items-center">
           <Image
             source={require("../../assets/images/T.png")}
-            style={{ width: 150, height: 50, marginBottom: 20 }}
+            style={{ width: 220, height: 88, marginBottom: 24 }}
             resizeMode="contain"
           />
-          <Text className={`${Typography.h1} text-primary dark:text-white`}>Verification</Text>
-          <Text className="text-gray-500 mt-2">
+          <Text className={`${Typography.h1} text-primary dark:text-white text-center`}>Verification</Text>
+          <Text className="text-gray-500 mt-2 text-center px-4">
             Enter the 4-digit code sent to {email || "your email"}.
           </Text>
         </View>
 
-        <View className="flex-row justify-between mb-10">
+        <View className="flex-row justify-center mb-10">
           {otp.map((digit, index) => (
             <TextInput
               key={index}
               ref={(ref) => (inputs.current[index] = ref)}
-              className="w-16 h-16 bg-gray-50 dark:bg-surface-dark border border-gray-200 dark:border-gray-800 rounded-2xl text-center text-2xl font-bold text-primary dark:text-white"
+              className="w-16 h-16 bg-gray-50 dark:bg-surface-dark border border-gray-200 dark:border-gray-800 rounded-2xl text-center text-2xl font-bold text-primary dark:text-white mx-1.5"
               keyboardType="number-pad"
               maxLength={1}
               value={digit}
@@ -120,7 +127,7 @@ export default function OTPScreen() {
             <Text className="text-accent font-bold">Resend</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Image, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Image, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -50,22 +50,29 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-background-dark">
-      <View className="px-6 mt-2">
+      {/* Top Navigation Row */}
+      <View className="px-6 pt-2">
         <TouchableOpacity 
           onPress={() => router.back()} 
           className="mt-4 w-10 h-10 items-center justify-center bg-gray-100 dark:bg-surface-dark rounded-full"
         >
           <Ionicons name="arrow-back" size={24} color="#c5a059" />
         </TouchableOpacity>
+      </View>
 
-        <View className="mt-8 mb-10">
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 60 }}
+        className="px-6"
+      >
+        <View className="mb-10 items-center">
           <Image
             source={require("../../assets/images/T.png")}
-            style={{ width: 150, height: 50, marginBottom: 20 }}
+            style={{ width: 220, height: 88, marginBottom: 24 }}
             resizeMode="contain"
           />
-          <Text className={`${Typography.h1} text-primary dark:text-white`}>Forgot Password</Text>
-          <Text className="text-gray-500 mt-2">
+          <Text className={`${Typography.h1} text-primary dark:text-white text-center`}>Forgot Password</Text>
+          <Text className="text-gray-500 mt-2 text-center px-4">
             Enter your email address to receive a 4-digit verification code.
           </Text>
         </View>
@@ -85,7 +92,7 @@ export default function ForgotPasswordScreen() {
           disabled={loading}
           className="mt-6"
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

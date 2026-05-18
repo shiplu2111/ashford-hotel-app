@@ -6,6 +6,7 @@ import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { RevenueCard } from "../../components/dashboard/RevenueCard";
 import { StatsCard } from "../../components/dashboard/StatsCard";
 import { SectionHeader, ActivityCard } from "../../components/dashboard/SharedComponents";
+import { BookingCalendar } from "../../components/dashboard/BookingCalendar";
 import { useTheme } from "../../hooks/useTheme";
 import { ENDPOINTS } from "../../constants/Api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -86,6 +87,12 @@ export default function DashboardScreen() {
           <StatsCard label="In-House" value={String(data?.active_bookings || "0")} icon="people" color="#c5a059" />
           <StatsCard label="Done" value={String(data?.completed_bookings || "0")} icon="checkmark-done-circle" color="#10b981" />
         </View>
+
+        {/* Calendar Occupancy Grid */}
+        <BookingCalendar 
+          bookingsData={data?.calendar_bookings || null} 
+          calendarDetails={data?.calendar_details || null} 
+        />
 
         {/* Today's Check-ins */}
         <SectionHeader 

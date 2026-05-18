@@ -115,18 +115,15 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-background-dark">
-      <ScrollView showsVerticalScrollIndicator={false} className="px-6 mt-2">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mt-4 w-10 h-10 items-center justify-center bg-gray-100 dark:bg-surface-dark rounded-full"
-        >
-          <Ionicons name="arrow-back" size={24} color="#c5a059" />
-        </TouchableOpacity>
-
-        <View className="mt-8 mb-10 items-center">
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingBottom: 40 }}
+        className="px-6"
+      >
+        <View className="mb-10 items-center">
           <Image
             source={require("../../assets/images/T.png")}
-            style={{ width: 200, height: 80, marginBottom: 20 }}
+            style={{ width: 220, height: 88, marginBottom: 20 }}
             resizeMode="contain"
           />
           <Text className={`${Typography.h1} text-primary dark:text-white text-center`}>

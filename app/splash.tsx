@@ -58,8 +58,8 @@ export default function SplashScreen() {
       <View className="flex-1 items-center justify-center">
         <Animated.View style={logoStyle} className="items-center">
           <Image
-            source={require("../assets/images/T.png")}
-            style={{ width: 300, height: 100 }}
+            source={require("../assets/images/icon.png")}
+            style={{ width: 280, height: 140 }}
             resizeMode="contain"
           />
         </Animated.View>
