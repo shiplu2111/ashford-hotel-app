@@ -16,6 +16,56 @@ export default function OTPScreen() {
   const [loading, setLoading] = useState(false);
   const inputs = useRef<Array<TextInput | null>>([]);
 
+  const [cooldown, setCooldown] = useState(120);
+  const [resending, setResending] = useState(false);
+
+  React.useEffect(() => {
+    let interval: any;
+    if (cooldown > 0) {
+      interval = setInterval(() => {
+        setCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [cooldown]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  const handleResendOTP = async () => {
+    if (cooldown > 0 || resending) return;
+
+    setResending(true);
+    try {
+      const response = await fetch(ENDPOINTS.ADMIN_FORGOT_PASSWORD, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.status === "success" || data.status === "ok") {
+        Alert.alert("OTP Sent", "A new 4-digit verification code has been sent to your email.");
+        setCooldown(120); // Reset the 2-minute cooldown timer
+        setOtp(["", "", "", ""]); // Reset input fields
+        inputs.current[0]?.focus(); // Refocus first field
+      } else {
+        Alert.alert("Error", data.message || "Failed to resend OTP");
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Unable to connect to the server.");
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleChange = (text: string, index: number) => {
     const newOtp = [...otp];
     newOtp[index] = text;
@@ -123,8 +173,13 @@ export default function OTPScreen() {
 
         <View className="flex-row justify-center mt-8">
           <Text className="text-gray-500">Didn't receive the code? </Text>
-          <TouchableOpacity>
-            <Text className="text-accent font-bold">Resend</Text>
+          <TouchableOpacity 
+            onPress={handleResendOTP} 
+            disabled={cooldown > 0 || resending}
+          >
+            <Text className={`font-bold ${cooldown > 0 || resending ? "text-gray-400" : "text-accent"}`}>
+              {resending ? "Resending..." : cooldown > 0 ? `Resend (${formatTime(cooldown)})` : "Resend"}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
